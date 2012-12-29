@@ -107,6 +107,43 @@ class pxplugin_DBML_register_object{
 		return $this->database_define;
 	}//get_db_definition()
 
+	/**
+	 * テーブル定義配列を取り出す。
+	 */
+	public function get_table_definition( $table_name ){
+		$table_name = $this->bind_meta_string($table_name);
+		foreach( $this->database_define['tables'] as $table_info ){
+			if($table_info['name'] == $table_name){
+				return $table_info;
+			}
+		}
+		return false;
+	}//get_table_definition()
+
+	/**
+	 * テーブルのレコード数を数える
+	 */
+	public function get_count_table_rows( $table_name ){
+		$table_name = $this->bind_meta_string($table_name);
+
+		ob_start();?>
+SELECT count(*) AS count FROM :D:table_name;
+<?php
+		$sql = @ob_get_clean();
+
+		$bind_data = array(
+			'table_name'=>$table_name,
+		);
+		$sql = $this->px->dbh()->bind( $sql , $bind_data );
+		$res = $this->px->dbh()->send_query( $sql );
+		if( !$res ){
+			return false;
+		}
+		$value = $this->px->dbh()->get_results();
+
+		return intval($value[0]['count']);
+	}//get_count_table_rows()
+
 }
 
 ?>
