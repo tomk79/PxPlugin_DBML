@@ -2,7 +2,7 @@
 <dbml>
 	<tables>
 		<table name="{$prefix}_user" logical-name="PxFWユーザーマスタテーブル" skip-create="true">
-			<column name="id"           logical-name="ユーザーID"                     type="varchar"  size="64"  not-null="true"                key-type="master"               />
+			<column name="id"           logical-name="ユーザーID"                     type="varchar"  size="64"  not-null="true"                key-type="master" unique="true" />
 			<column name="user_account" logical-name="ユーザーアカウント"             type="varchar"  size="64"  not-null="true"                                  unique="true" />
 			<column name="user_pw"      logical-name="パスワード"                     type="varchar"  size="32"  not-null="true"                                                />
 			<column name="user_name"    logical-name="ユーザー名"                     type="varchar"  size="128"                                                                />

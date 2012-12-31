@@ -144,6 +144,243 @@ SELECT count(*) AS count FROM :D:table_name;
 		return intval($value[0]['count']);
 	}//get_count_table_rows()
 
+	/**
+	 * テーブルに行を追加する
+	 */
+	public function insert( $table_name, $row ){
+		$table_name = $this->bind_meta_string($table_name);
+
+		$table_definition = $this->get_table_definition($table_name);
+		$ary_key = array();
+		$ary_val = array();
+		$bind_data = array();
+		foreach( $table_definition['columns'] as $column_info ){
+			//  シリアル型(=auto inclement)は、指定できない。
+			if($column_info['type'] == 'series'){
+				continue;
+			}
+
+			//  VARCHARマスターキーを自動生成
+			if( $column_info['key_type'] == 'master' && $column_info['type'] == 'varchar' && is_null( $row[$column_info['name']] ) ){
+				$row[$column_info['name']] = uniqid();
+			}
+
+			//  メタ文字の接頭辞を決める
+			$type_prefix = ':S:';
+			switch($column_info['type']){
+				case 'int':
+				case 'serial':
+					$type_prefix = ':N:';
+					break;
+				default:
+					$type_prefix = ':S:';
+			}
+
+			//  NOT NULL の処理
+			if( $column_info['not_null'] && is_null($row[$column_info['name']])){
+				if( !is_null($column_info['default']) ){
+					$row[$column_info['name']] = $column_info['default'];
+				}else{
+					//  NOT NULL でかつ DEFAULT が指定されていないカラムに
+					//  NULL を入れようとした場合は、続行不能。
+					return false;
+				}
+			}
+
+			//  DATETIME型の "NOW" を処理。
+			if( $column_info['type'] == 'datetime' && strtolower($row[$column_info['name']]) == 'now' ){
+				$row[$column_info['name']] = date('Y-m-d H:i:s');
+			}
+
+			//  要素をセット
+			$bind_data[$column_info['name']] = $row[$column_info['name']];
+			array_push($ary_key,$column_info['name']);
+			array_push($ary_val,$type_prefix.$column_info['name']);
+
+		}
+
+		$sql = '';
+		$sql .= 'INSERT ';
+		$sql .= 'INTO '.$this->px->dbh()->bind( ':D:table_name' , array('table_name'=>$table_name) ).' ';
+		$sql .= '('.implode(',',$ary_key).') ';
+		$sql .= 'VALUES ('.implode(',',$ary_val).')';
+		$sql .= ';';
+
+		$sql = $this->px->dbh()->bind( $sql , $bind_data );
+		$res = $this->px->dbh()->send_query( $sql );
+		if( !$res ){
+			return false;
+		}
+
+		return true;
+	}//insert()
+
+	/**
+	 * テーブルの行を書き換える
+	 */
+	public function update( $table_name, $conditions, $row ){
+		$table_name = $this->bind_meta_string($table_name);
+
+		$table_definition = $this->get_table_definition($table_name);
+		$ary_conditions = array();
+		$ary_key_val = array();
+		$bind_data = array();
+		foreach( $table_definition['columns'] as $column_info ){
+			//  メタ文字の接頭辞を決める
+			$type_prefix = ':S:';
+			switch($column_info['type']){
+				case 'int':
+				case 'serial':
+					$type_prefix = ':N:';
+					break;
+				default:
+					$type_prefix = ':S:';
+			}
+
+			//  DATETIME型の "NOW" を処理。
+			if( $column_info['type'] == 'datetime' ){
+				if( strtolower($row[$column_info['name']]) == 'now' ){ $row[$column_info['name']] = date('Y-m-d H:i:s'); }
+				if( strtolower($conditions[$column_info['name']]) == 'now' ){ $conditions[$column_info['name']] = date('Y-m-d H:i:s'); }
+			}
+
+			//  要素をセット
+			if( array_key_exists( $column_info['name'], $row ) ){
+				$bind_data['VALUES_'.$column_info['name']] = $row[$column_info['name']];
+				array_push($ary_key_val, $column_info['name'].'='.$type_prefix.'VALUES_'.$column_info['name']);
+			}
+			if( array_key_exists( $column_info['name'], $conditions ) ){
+				array_push($ary_conditions, $column_info['name'].'='.$type_prefix.'CONDITIONS_'.$column_info['name']);
+			}
+
+		}
+		//  条件式のバインドデータを作成
+		foreach( $conditions as $key=>$val ){
+			$bind_data['CONDITIONS_'.$key] = $val;
+		}
+		$sql = '';
+		$sql .= 'UPDATE ';
+		$sql .= ''.$this->px->dbh()->bind( ':D:table_name' , array('table_name'=>$table_name) ).' ';
+		if(count($ary_key_val)){
+			$sql .= 'SET ';
+			$sql .= ''.implode(', ',$ary_key_val).' ';
+		}
+		if(count($ary_conditions)){
+			$sql .= 'WHERE ';
+			$sql .= ''.implode(' AND ',$ary_conditions).' ';
+		}
+		$sql .= ';';
+
+		$sql = $this->px->dbh()->bind( $sql , $bind_data );
+		$res = $this->px->dbh()->send_query( $sql );
+		if( !$res ){
+			return false;
+		}
+
+		return true;
+	}//update()
+
+	/**
+	 * テーブルから行を取得する
+	 */
+	public function select( $table_name, $conditions, $limit = null, $offset = 0 ){
+		$table_name = $this->bind_meta_string($table_name);
+
+		$offset = intval( $offset );
+		if( !is_null( $limit ) ){
+			$limit = intval( $limit );
+		}
+
+		$table_definition = $this->get_table_definition($table_name);
+		$ary_conditions = array();
+		$bind_data = array();
+		foreach( $table_definition['columns'] as $column_info ){
+			if( !array_key_exists( $column_info['name'], $conditions ) ){ continue; }
+
+			//  メタ文字の接頭辞を決める
+			$type_prefix = ':S:';
+			switch($column_info['type']){
+				case 'int':
+				case 'serial':
+					$type_prefix = ':N:';
+					break;
+				default:
+					$type_prefix = ':S:';
+			}
+
+			//  要素をセット
+			$bind_data['CONDITIONS_'.$column_info['name']] = $conditions[$column_info['name']];
+			array_push($ary_conditions,$column_info['name'].'='.$type_prefix.'CONDITIONS_'.$column_info['name']);
+
+		}
+
+		$sql = '';
+		$sql .= 'SELECT * ';
+		$sql .= 'FROM '.$this->px->dbh()->bind( ':D:table_name' , array('table_name'=>$table_name) ).' ';
+		if(count($ary_conditions)){
+			$sql .= 'WHERE ';
+			$sql .= ''.implode(' AND ',$ary_conditions).' ';
+		}
+		if( $limit > 0 ){
+			$sql .= $this->px->dbh()->mk_sql_limit($limit, $offset);
+		}
+		$sql .= ';';
+
+		$sql = $this->px->dbh()->bind( $sql , $bind_data );
+		$res = $this->px->dbh()->send_query( $sql );
+		if( !$res ){
+			return false;
+		}
+
+		$value = $this->px->dbh()->get_results();
+
+		return $value;
+	}//select()
+
+	/**
+	 * テーブルの行を削除する
+	 */
+	public function delete( $table_name, $conditions ){
+		$table_name = $this->bind_meta_string($table_name);
+
+		$table_definition = $this->get_table_definition($table_name);
+		$ary_conditions = array();
+		$bind_data = array();
+		foreach( $table_definition['columns'] as $column_info ){
+			if( !array_key_exists( $column_info['name'], $conditions ) ){ continue; }
+
+			//  メタ文字の接頭辞を決める
+			$type_prefix = ':S:';
+			switch($column_info['type']){
+				case 'int':
+				case 'serial':
+					$type_prefix = ':N:';
+					break;
+				default:
+					$type_prefix = ':S:';
+			}
+
+			//  要素をセット
+			$bind_data['CONDITIONS_'.$column_info['name']] = $conditions[$column_info['name']];
+			array_push($ary_conditions,$column_info['name'].'='.$type_prefix.'CONDITIONS_'.$column_info['name']);
+
+		}
+
+		$sql = '';
+		$sql .= 'DELETE ';
+		$sql .= 'FROM '.$this->px->dbh()->bind( ':D:table_name' , array('table_name'=>$table_name) ).' ';
+		$sql .= 'WHERE ';
+		$sql .= ''.implode(' AND ',$ary_conditions).' ';
+		$sql .= ';';
+
+		$sql = $this->px->dbh()->bind( $sql , $bind_data );
+		$res = $this->px->dbh()->send_query( $sql );
+		if( !$res ){
+			return false;
+		}
+
+		return true;
+	}//delete()
+
 }
 
 ?>
