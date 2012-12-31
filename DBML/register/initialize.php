@@ -36,6 +36,7 @@ class pxplugin_DBML_register_initialize{
 		$database_define = $this->obj_dbml->get_db_definition();
 
 		$sql = array();
+		$sqlAlterTables = array();
 		foreach( $database_define['tables'] as $table_info ){
 			if( $table_info['skip_create'] ){ continue; }
 
@@ -55,6 +56,18 @@ class pxplugin_DBML_register_initialize{
 					$sqlColumnSrc .= '('.$column_info['size'].')';
 				}
 				$sqlColumnSrc .= ' ';
+				if( $column_info['unique'] ){
+					if( $this->px->get_conf('dbms.dbms') == 'postgresql' ){
+						#	PostgreSQL
+						array_push( $sqlAlterTables, 'ALTER TABLE '.$table_info['name'].' ADD UNIQUE ( '.$column_info['name'].' );' );
+					}elseif( $this->px->get_conf('dbms.dbms') == 'sqlite' ){
+						#	SQLite
+						$sqlColumnSrc .= 'UNIQUE ';
+					}elseif( $this->px->get_conf('dbms.dbms') == 'mysql' ){
+						#	MySQL
+						array_push( $sqlAlterTables, 'CREATE UNIQUE INDEX id ON '.$table_info['name'].' ('.$column_info['name'].''.(strlen($column_info['size'])?'('.$column_info['size'].')':'').');' );
+					}
+				}
 				if( $column_info['not_null'] ){
 					$sqlColumnSrc .= 'NOT NULL ';
 				}
@@ -68,6 +81,8 @@ class pxplugin_DBML_register_initialize{
 			$sqlSrc .= ');'."\r\n";
 			array_push( $sql , $sqlSrc );
 		}
+
+		$sql = array_merge($sql, $sqlAlterTables);
 
 		if( !$behavior ){
 			//  トランザクション：スタート

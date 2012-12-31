@@ -62,11 +62,15 @@ class pxplugin_DBML_register_object{
 				$column_info['not_null']     = $column['attributes']['not-null']    ;
 				$column_info['default']      = $column['attributes']['default']     ;
 				$column_info['key_type']     = $column['attributes']['key-type']    ;
+				$column_info['foreign_key']  = $column['attributes']['foreign-key'] ;
+				$column_info['unique']       = $column['attributes']['unique']      ;
 
 				//  値のチューニング
 				$column_info['name'] = $this->bind_meta_string($column_info['name']);
 				$column_info['size'] = (strlen($column_info['size'])?intval($column_info['size']):null);
+				$column_info['unique'] = $this->judge_boolean($column_info['unique']);
 				$column_info['not_null'] = $this->judge_boolean($column_info['not_null']);
+				$column_info['foreign_key'] = $this->bind_meta_string($column_info['foreign_key']);
 				//  / 値のチューニング
 
 				array_push( $table_info['columns'], $column_info );
@@ -82,6 +86,7 @@ class pxplugin_DBML_register_object{
 	 * 埋め込み情報をバインドする
 	 */
 	private function bind_meta_string( $text ){
+		if(!is_string($text)){return $text;}
 		$text = preg_replace( '/\{\$prefix\}/' , $this->px->get_conf('dbms.prefix') , $text );
 		return $text;
 	}//bind_meta_string()
