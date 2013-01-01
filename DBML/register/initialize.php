@@ -46,16 +46,53 @@ class pxplugin_DBML_register_initialize{
 			$sqlColumnSrcs = array();
 			foreach($table_info['columns'] as $column_info){
 				$sqlColumnSrc = '';
+
+				//  カラム名
 				$sqlColumnSrc .= $column_info['name'].'    ';
-				if( strtoupper($column_info['type']) == 'DATETIME' && $this->px->get_conf('dbms.dbms') == 'postgresql' ){
+
+				//  型
+				if( strtoupper($column_info['type']) == 'SERIAL' ){
+					//  SERIAL型(=INT+AUTO_INCREMENT)
+					if( $this->px->get_conf('dbms.dbms') == 'postgresql' ){
+						//  PostgreSQLの処理(そのままスルー)
+						$sqlColumnSrc .= strtoupper($column_info['type']);
+					}else{
+						if( $this->px->get_conf('dbms.dbms') == 'mysql' ){
+							//  MySQLの処理
+							$sqlColumnSrc .= strtoupper('INT');
+							$column_info['size'] = 10;//10桁固定(最大が2147483647になるらしい)
+							array_push( $sqlAlterTables, 'ALTER TABLE '.$table_info['name'].' CHANGE '.$column_info['name'].' '.$column_info['name'].' INT('.$column_info['size'].') UNIQUE NOT NULL AUTO_INCREMENT;' );
+						}elseif( $this->px->get_conf('dbms.dbms') == 'sqlite' ){
+							//  SQLiteの処理
+							$sqlColumnSrc .= strtoupper('INTEGER');
+							$column_info['size'] = null;
+							$column_info['key_type'] = 'primary';
+						}
+					}
+				}elseif( strtoupper($column_info['type']) == 'DATETIME' && $this->px->get_conf('dbms.dbms') == 'postgresql' ){
+					//  DATETIME型
+					//    PostgreSQLではTIMESTAMP型になる。
 					$sqlColumnSrc .= strtoupper('TIMESTAMP');
 				}else{
+					//  それ以外は普通に通す
 					$sqlColumnSrc .= strtoupper($column_info['type']);
 				}
+				//  データサイズ
 				if( strlen($column_info['size']) && $this->px->get_conf('dbms.dbms') != 'postgresql' ){
 					$sqlColumnSrc .= '('.$column_info['size'].')';
 				}
+
 				$sqlColumnSrc .= ' ';
+
+				//  PRIMARY KEY制約
+				if( $column_info['key_type'] == 'primary' ){
+					$sqlColumnSrc .= 'PRIMARY KEY ';
+					$column_info['unique'] = false;
+					$column_info['not_null'] = false;
+					unset($column_info['default']);
+				}
+
+				//  UNIQUE制約
 				if( $column_info['unique'] ){
 					if( $this->px->get_conf('dbms.dbms') == 'postgresql' ){
 						#	PostgreSQL
@@ -68,12 +105,24 @@ class pxplugin_DBML_register_initialize{
 						array_push( $sqlAlterTables, 'CREATE UNIQUE INDEX id ON '.$table_info['name'].' ('.$column_info['name'].''.(strlen($column_info['size'])?'('.$column_info['size'].')':'').');' );
 					}
 				}
+
+				//  SQLite の AUTOINCREMENT
+				if( strtoupper($column_info['type']) == 'SERIAL' && $this->px->get_conf('dbms.dbms') == 'sqlite' ){
+					$sqlColumnSrc .= 'AUTOINCREMENT ';
+				}
+
+				//  NOT NULL制約
 				if( $column_info['not_null'] ){
 					$sqlColumnSrc .= 'NOT NULL ';
 				}
+
+				//  DEFAULT
 				if( strlen($column_info['default']) ){
-					$sqlColumnSrc .= 'DEFAULT '.$column_info['default'].' ';
+					$sqlColumnSrc .= 'DEFAULT ';
+					$sqlColumnSrc .= $column_info['default'];
+					$sqlColumnSrc .= ' ';
 				}
+
 				array_push( $sqlColumnSrcs , $sqlColumnSrc );
 			}
 
