@@ -126,6 +126,12 @@ class pxplugin_DBML_register_initialize{
 				array_push( $sqlColumnSrcs , $sqlColumnSrc );
 			}
 
+			foreach($table_info['columns'] as $column_info){
+				if($column_info['key_type']!='foreign'){continue;}
+				if(!strlen($column_info['foreign_key'])){continue;}
+				preg_match( '/^(.*?)\.(.*)$/si', $column_info['foreign_key'], $foreign_keys );
+				array_push( $sqlColumnSrcs, 'FOREIGN KEY ('.$column_info['name'].') REFERENCES '.$foreign_keys[1].'('.$foreign_keys[2].')' );
+			}
 			$sqlSrc .= '    '.implode( ','."\r\n".'    ' , $sqlColumnSrcs )."\r\n";
 			$sqlSrc .= ');'."\r\n";
 			array_push( $sql , $sqlSrc );
