@@ -166,7 +166,7 @@ SELECT count(*) AS count FROM :D:table_name;
 			}
 
 			//  VARCHARマスターキーを自動生成
-			if( $column_info['key_type'] == 'master' && $column_info['type'] == 'varchar' && is_null( $row[$column_info['name']] ) ){
+			if( $column_info['key_type'] == 'primary' && $column_info['type'] == 'varchar' && is_null( $row[$column_info['name']] ) ){
 				$row[$column_info['name']] = uniqid();
 			}
 
