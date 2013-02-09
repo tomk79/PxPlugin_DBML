@@ -22,7 +22,7 @@ Pickles Framework 1.x に組み込んで使用する
 【拡張コンフィグ項目】
 
 ---- ここから
-[plugin.DBML]
+[plugin-DBML]
 ; プラグイン "DBML" 拡張項目
 path_dbml = "./_PX/data/database.xml" ; DBMLファイルのパス
 ---- ここまで

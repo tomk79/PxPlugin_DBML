@@ -16,7 +16,7 @@ class pxplugin_DBML_register_object{
 	public function __construct($px){
 		$this->px = $px;
 
-		$this->path_dbml = $px->get_conf('plugin.DBML.path_dbml');
+		$this->path_dbml = $px->get_conf('plugin-DBML.path_dbml');
 		$this->parse_dbml();
 	}//__construct()
 
