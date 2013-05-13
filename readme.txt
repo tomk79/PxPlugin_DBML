@@ -27,3 +27,9 @@ Pickles Framework 1.x に組み込んで使用する
 path_dbml = "./_PX/data/database.xml" ; DBMLファイルのパス
 ---- ここまで
 
+
+
+------
+(C)Tomoya Koyanagi.
+http://www.pxt.jp/
+
