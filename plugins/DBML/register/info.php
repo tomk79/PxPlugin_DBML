@@ -14,6 +14,20 @@ class pxplugin_DBML_register_info{
 		return '0.0.0a1-nb';
 	}
 
+	/**
+	 * コンフィグ項目を定義する
+	 */
+	public function config_define(){
+		return array(
+			'plugin-DBML.path_dbml'=>
+				array(
+					'description'=>'.dbml ファイルのパス',
+					'type'=>'realpath' ,
+					'required'=>true ,
+				) ,
+		);
+	}
+
 }
 
 ?>
