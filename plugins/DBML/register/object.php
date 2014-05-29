@@ -73,10 +73,23 @@ class pxplugin_DBML_register_object{
 				$column_info['foreign_key'] = $this->bind_meta_string($column_info['foreign_key']);
 				//  / 値のチューニング
 
-				array_push( $table_info['columns'], $column_info );
+				$table_info['columns'][$column_info['name']] = $column_info;
 			}
 
-			array_push( $this->database_define['tables'], $table_info );
+			$this->database_define['tables'][$table_info['name']] = $table_info;
+		}
+
+		foreach( $this->database_define['tables'] as $table ){
+			foreach( $table['columns'] as $column ){
+				if( $column['key_type'] == 'foreign' ){
+					preg_match('/^(.*?)\.(.*)$/s', $column['foreign_key'], $matched);
+					$key_column = $this->database_define['tables'][$matched[1]]['columns'][$matched[2]];
+					foreach( array('type', 'size', 'not_null', 'unique', 'default') as $key_name ){
+						$this->database_define['tables'][$table['name']]['columns'][$column['name']][$key_name] = $key_column[$key_name];
+					}
+
+				}
+			}
 		}
 
 		return true;
