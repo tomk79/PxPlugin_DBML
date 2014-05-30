@@ -57,11 +57,11 @@ class pxplugin_DBML_register_object{
 				$column_info = array();
 				$column_info['name']         = $column['attributes']['name']        ;
 				$column_info['logical_name'] = $column['attributes']['logical-name'];
-				$column_info['type']         = $column['attributes']['type']        ;
+				$column_info['type']         = strtolower($column['attributes']['type']);
 				$column_info['size']         = $column['attributes']['size']        ;
 				$column_info['not_null']     = $column['attributes']['not-null']    ;
 				$column_info['default']      = $column['attributes']['default']     ;
-				$column_info['key_type']     = $column['attributes']['key-type']    ;
+				$column_info['key_type']     = strtolower($column['attributes']['key-type']);
 				$column_info['foreign_key']  = $column['attributes']['foreign-key'] ;
 				$column_info['unique']       = $column['attributes']['unique']      ;
 
@@ -71,6 +71,14 @@ class pxplugin_DBML_register_object{
 				$column_info['unique'] = $this->judge_boolean($column_info['unique']);
 				$column_info['not_null'] = $this->judge_boolean($column_info['not_null']);
 				$column_info['foreign_key'] = $this->bind_meta_string($column_info['foreign_key']);
+				switch($column_info['type']){
+					case 'int':
+						$column_info['default'] = intval($column_info['default']);
+						break;
+				}
+				if( !strlen($column_info['type']) ){ $column_info['type'] = null; }
+				if( !strlen($column_info['default']) ){ $column_info['default'] = null; }
+				if( !strlen($column_info['key_type']) ){ $column_info['key_type'] = null; }
 				//  / 値のチューニング
 
 				$table_info['columns'][$column_info['name']] = $column_info;
@@ -98,7 +106,7 @@ class pxplugin_DBML_register_object{
 	/**
 	 * 埋め込み情報をバインドする
 	 */
-	private function bind_meta_string( $text ){
+	public function bind_meta_string( $text ){
 		if(!is_string($text)){return $text;}
 		$text = preg_replace( '/\{\$prefix\}/' , $this->px->get_conf('dbms.prefix') , $text );
 		return $text;
@@ -398,6 +406,14 @@ SELECT count(*) AS count FROM :D:table_name;
 
 		return true;
 	}//delete()
+
+	/**
+	 * フォームの自動生成
+	 */
+	public function auto_form( $table_name, $options = array() ){
+		$class_name = $this->px->load_px_plugin_class( '/DBML/funcs/autoform.php' );
+		return (new $class_name( $this->px, $this, $table_name, $options ))->execute();
+	}
 
 }
 

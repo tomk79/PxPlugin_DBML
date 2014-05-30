@@ -40,11 +40,11 @@ path_dbml = "./_PX/data/database.xml" ; DBMLファイルのパス
 			<column name="tmp_pw"       logical-name="一時パスワード"                 type="varchar"  size="32"                                                                 />
 			<column name="tmp_email"    logical-name="一時メールアドレス"             type="varchar"  size="128"                                                                />
 			<column name="tmp_data"     logical-name="その他の一時的なデータ"         type="text"                                                                               />
-			<column name="login_date"   logical-name="最後にログインした日時"         type="datetime"                            default="null"                                 />
-			<column name="set_pw_date"  logical-name="最後にパスワードを設定した日時" type="datetime"                            default="null"                                 />
-			<column name="create_date"  logical-name="登録日時"                       type="datetime"                            default="null"                                 />
-			<column name="update_date"  logical-name="更新日時"                       type="datetime"                            default="null"                                 />
-			<column name="delete_date"  logical-name="削除日時"                       type="datetime"                            default="null"                                 />
+			<column name="login_date"   logical-name="最後にログインした日時"         type="datetime"                            default=""                                     />
+			<column name="set_pw_date"  logical-name="最後にパスワードを設定した日時" type="datetime"                            default=""                                     />
+			<column name="create_date"  logical-name="登録日時"                       type="datetime"                            default=""                                     />
+			<column name="update_date"  logical-name="更新日時"                       type="datetime"                            default=""                                     />
+			<column name="delete_date"  logical-name="削除日時"                       type="datetime"                            default=""                                     />
 			<column name="delete_flg"   logical-name="削除フラグ"                     type="int"      size="1"   not-null="true" default="0"                                    />
 		</table>
 

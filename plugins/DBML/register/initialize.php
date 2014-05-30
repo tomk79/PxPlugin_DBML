@@ -75,6 +75,12 @@ class pxplugin_DBML_register_initialize{
 					$sqlColumnSrc .= strtoupper('TIMESTAMP');
 				}else{
 					//  それ以外は普通に通す
+					$type = strtolower( $column_info['type'] );
+					switch( strtolower($column_info['type']) ){
+						case 'password':
+						case 'email':
+							$type = 'varchar'; break;
+					}
 					$sqlColumnSrc .= strtoupper($column_info['type']);
 				}
 				//  データサイズ
