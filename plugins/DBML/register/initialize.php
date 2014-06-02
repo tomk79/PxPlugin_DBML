@@ -50,6 +50,26 @@ class pxplugin_DBML_register_initialize{
 				//  カラム名
 				$sqlColumnSrc .= $column_info['name'].'    ';
 
+				switch( strtolower($column_info['type']) ){
+					case 'password':
+					case 'email':
+						$column_info['type'] = 'varchar';
+						break;
+					case 'serial':
+						break;
+					case 'serial_s':
+						$column_info['type'] = 'varchar';
+						break;
+					case 'create_date':
+					case 'update_date':
+					case 'delete_date':
+						$column_info['type'] = 'datetime';
+						break;
+					case 'delete_flg':
+						$column_info['type'] = 'int';
+						break;
+				}
+
 				//  型
 				if( strtoupper($column_info['type']) == 'SERIAL' ){
 					//  SERIAL型(=INT+AUTO_INCREMENT)

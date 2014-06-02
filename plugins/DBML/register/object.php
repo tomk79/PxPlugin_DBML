@@ -75,6 +75,33 @@ class pxplugin_DBML_register_object{
 					case 'int':
 						$column_info['default'] = intval($column_info['default']);
 						break;
+					case 'password':
+						$column_info['size']      = 32;
+						break;
+					case 'email':
+						$column_info['size']      = 256;
+						break;
+					case 'serial':
+						$column_info['default']   = null;
+						$column_info['size']      = 11;
+						$column_info['not_null']  = true;
+						$column_info['unique']    = true;
+						break;
+					case 'serial_s':
+						$column_info['default']   = null;
+						$column_info['size']      = 64;
+						$column_info['not_null']  = true;
+						$column_info['unique']    = true;
+						break;
+					case 'create_date':
+					case 'update_date':
+					case 'delete_date':
+						$column_info['default']   = '';
+						break;
+					case 'delete_flg':
+						$column_info['size']      = 1;
+						$column_info['not_null']  = true;
+						break;
 				}
 				if( !strlen($column_info['type']) ){ $column_info['type'] = null; }
 				if( !strlen($column_info['default']) ){ $column_info['default'] = null; }
