@@ -114,6 +114,7 @@ class pxplugin_DBML_register_object{
 			$this->database_define['tables'][$table_info['name']] = $table_info;
 		}
 
+		// 外部キー制約のカラムの型を外部キーテーブルの仕様に合わせる。
 		foreach( $this->database_define['tables'] as $table ){
 			foreach( $table['columns'] as $column ){
 				if( $column['key_type'] == 'foreign' ){
@@ -121,6 +122,22 @@ class pxplugin_DBML_register_object{
 					$key_column = $this->database_define['tables'][$matched[1]]['columns'][$matched[2]];
 					foreach( array('type', 'size', 'not_null', 'unique', 'default') as $key_name ){
 						$this->database_define['tables'][$table['name']]['columns'][$column['name']][$key_name] = $key_column[$key_name];
+					}
+					switch( strtolower($this->database_define['tables'][$table['name']]['columns'][$column['name']]['type']) ){
+						case 'serial':
+						case 'delete_flg':
+							$this->database_define['tables'][$table['name']]['columns'][$column['name']]['type'] = 'int';
+							break;
+						case 'serial_s':
+						case 'email':
+						case 'password':
+							$this->database_define['tables'][$table['name']]['columns'][$column['name']]['type'] = 'varchar';
+							break;
+						case 'create_date':
+						case 'update_date':
+						case 'delete_date':
+							$this->database_define['tables'][$table['name']]['columns'][$column['name']]['type'] = 'datetime';
+							break;
 					}
 
 				}
