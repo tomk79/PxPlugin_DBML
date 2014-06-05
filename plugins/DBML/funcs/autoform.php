@@ -70,6 +70,16 @@ class pxplugin_DBML_funcs_autoform{
 <form action="?" method="post">
 <table class="form_elements" style="width:100%;"><?php
 foreach( $this->table_definition['columns'] as $column ){
+	switch( strtolower($column['type']) ){
+		//自動処理系の型
+		case 'serial':
+		case 'serial_s':
+		case 'create_date':
+		case 'update_date':
+		case 'delete_date':
+		case 'delete_flg':
+			continue 2;
+	}
 	print '<tr>'."\n";
 	print '<th>'.t::h( $column['logical_name'] ).'</th>'."\n";
 	print '<td>';
@@ -121,10 +131,27 @@ foreach( $this->table_definition['columns'] as $column ){
 <form action="?" method="post">
 <table class="form_elements" style="width:100%;"><?php
 foreach( $this->table_definition['columns'] as $column ){
+	switch( strtolower($column['type']) ){
+		//自動処理系の型
+		case 'serial':
+		case 'serial_s':
+		case 'create_date':
+		case 'update_date':
+		case 'delete_date':
+		case 'delete_flg':
+			continue 2;
+	}
 	print '<tr>'."\n";
 	print '<th>'.t::h( $column['logical_name'] ).'</th>'."\n";
 	print '<td>';
-	print ''.t::h( $this->px->req()->get_param($column['name']) ).'';
+	switch( strtolower($column['type']) ){
+		case 'password':
+			print '********';
+			break;
+		default:
+			print ''.t::h( $this->px->req()->get_param($column['name']) ).'';
+			break;
+	}
 	print '<input type="hidden" name="'.t::h( $column['name'] ).'" value="'.t::h( $this->px->req()->get_param($column['name']) ).'" />';
 	print '</td>'."\n";
 	print '</tr>'."\n";
@@ -148,7 +175,34 @@ foreach( $this->table_definition['columns'] as $column ){
 	private function apply(){
 		$values = array();
 		foreach( $this->table_definition['columns'] as $column ){
-			$values[$column['name']] = $this->px->req()->get_param($column['name']);
+			switch( strtolower($column['type']) ){
+				//自動処理系の型
+				case 'serial':
+					$values[$column['name']] = null;//追加
+					break;
+				case 'serial_s':
+					$values[$column['name']] = uniqid();//追加
+					break;
+				case 'create_date':
+					$values[$column['name']] = $this->px->dbh()->int2datetime( time() );//追加
+					break;
+				case 'update_date':
+					$values[$column['name']] = null;//追加
+					break;
+				case 'delete_date':
+					$values[$column['name']] = null;//追加
+					break;
+				case 'delete_flg':
+					$values[$column['name']] = 0;//追加
+					break;
+
+				case 'password':
+					$values[$column['name']] = $this->px->user()->crypt_user_password( $this->px->req()->get_param($column['name']) );
+					break;
+				default:
+					$values[$column['name']] = $this->px->req()->get_param($column['name']);
+					break;
+			}
 		}
 		$result = $this->dbml->insert( $this->table_name, $values );
 		if( !$result ){
@@ -176,16 +230,35 @@ foreach( $this->table_definition['columns'] as $column ){
 		$errors = array();
 		foreach( $this->table_definition['columns'] as $column ){
 			$input_value = $this->px->req()->get_param($column['name']);
-			if( $column['type'] == 'varchar' ){
-
+			$type = strtolower($column['type']);
+			if( $type == 'serial' ){
+				continue;
 			}
-			elseif( $column['type'] == 'email' ){
+			elseif( $type == 'serial_s' ){
+				continue;
+			}
+			elseif( $type == 'create_date' ){
+				continue;
+			}
+			elseif( $type == 'update_date' ){
+				continue;
+			}
+			elseif( $type == 'delete_date' ){
+				continue;
+			}
+			elseif( $type == 'delete_flg' ){
+				continue;
+			}
+			elseif( $type == 'varchar' ){
+				continue;
+			}
+			elseif( $type == 'email' ){
 				if( !preg_match( '/^.+\@.+$/s', $input_value ) ){
 					$errors[$column['name']] = array('message'=>'形式が不正です。');
 				}
 
 			}
-			elseif( $column['type'] == 'int' ){
+			elseif( $type == 'int' ){
 				if( !preg_match( '/^(?:[1-9][0-9]*|0)$/s', $input_value ) ){
 					$errors[$column['name']] = array('message'=>'使用できない文字が含まれています。');
 				}
