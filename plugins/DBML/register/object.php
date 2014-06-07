@@ -339,7 +339,6 @@ SELECT count(*) AS count FROM :D:table_name;
 			$sql .= ''.implode(' AND ',$ary_conditions).' ';
 		}
 		$sql .= ';';
-
 		$sql = $this->px->dbh()->bind( $sql , $bind_data );
 		$res = $this->px->dbh()->send_query( $sql );
 		if( !$res ){
@@ -452,11 +451,19 @@ SELECT count(*) AS count FROM :D:table_name;
 	}//delete()
 
 	/**
-	 * フォームの自動生成
+	 * フォームを自動生成する。
 	 */
 	public function auto_form( $table_name, $options = array() ){
 		$class_name = $this->px->load_px_plugin_class( '/DBML/funcs/autoform.php' );
 		return (new $class_name( $this->px, $this, $table_name, $options ))->execute();
+	}
+
+	/**
+	 * リストを自動生成する。
+	 */
+	public function auto_list( $table_name, $path_param, $options = array() ){
+		$class_name = $this->px->load_px_plugin_class( '/DBML/funcs/autolist.php' );
+		return (new $class_name( $this->px, $this, $table_name, $path_param, $options ))->execute();
 	}
 
 }

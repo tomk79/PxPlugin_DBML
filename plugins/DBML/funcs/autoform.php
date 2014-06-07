@@ -1,5 +1,7 @@
 <?php
-
+/**
+ * class pxplugin_DBML_funcs_autoform
+ */
 /**
  * PX Plugin "DBML"
  */
@@ -10,9 +12,20 @@ class pxplugin_DBML_funcs_autoform{
 	private $table_name;
 	private $options;
 	private $table_definition;
+	/**
+	 * フォームの種類
+	 *
+	 * insert|update|delete
+	 */
+	private $form_type;
+	/**
+	 * 対象レコードのID
+	 */
+	private $target;
 
 	/**
 	 * コンストラクタ
+	 * 
 	 * @param $px = PxFWコアオブジェクト
 	 * @param $dbml = プラグインオブジェクト
 	 * @param $table_name = 対象のテーブル名
@@ -25,15 +38,24 @@ class pxplugin_DBML_funcs_autoform{
 		$this->options = $options;
 		$this->table_definition = $this->dbml->get_table_definition( $this->table_name );
 
-		$method = 'insert';
-		if( strlen( $this->options['target_record'] ) ){
-			$method = 'update';
+		$this->form_type = 'insert';
+		switch( @strtolower( $this->options['method'] ) ){
+			case 'insert':
+			case 'update':
+			case 'delete':
+				$this->form_type = @strtolower( $this->options['method'] );
+				break;
+		}
+		if( $this->form_type == 'update' || $this->form_type == 'delete' ){
+			$this->target = $options['target'];
 		}
 	}
 
 
 	/**
-	 * フォーム生成を実行する
+	 * フォーム生成を実行する。
+	 * 
+	 * @return string|void 画面を描画するコンテンツエリアのHTMLソースを返します。またはリダイレクト処理の場合は値を返しません。
 	 */
 	public function execute(){
 		// test::var_dump($this->table_name);
@@ -55,6 +77,9 @@ class pxplugin_DBML_funcs_autoform{
 		}else{
 			if( !strlen($mode) ){
 				$errors = array();
+				if( $this->form_type == 'update' || $this->form_type == 'delete' ){
+					$this->load_default_value( $this->target );//デフォルトの値を入力
+				}
 			}
 			$src .= $this->page_input($errors);
 		}
@@ -62,7 +87,7 @@ class pxplugin_DBML_funcs_autoform{
 	}
 
 	/**
-	 * 入力画面を作る
+	 * 入力画面を作る。
 	 */
 	private function page_input( $errors ){
 		$src = '';
@@ -123,7 +148,7 @@ foreach( $this->table_definition['columns'] as $column ){
 	}
 
 	/**
-	 * 確認画面を作る
+	 * 確認画面を作る。
 	 */
 	private function page_confirm(){
 		$src = '';
@@ -170,7 +195,7 @@ foreach( $this->table_definition['columns'] as $column ){
 	}
 
 	/**
-	 * 処理を実行する
+	 * 処理を実行する。
 	 */
 	private function apply(){
 		$values = array();
@@ -188,14 +213,22 @@ foreach( $this->table_definition['columns'] as $column ){
 					break;
 				case 'update_date':
 					$values[$column['name']] = null;//追加
+					if( $this->form_type == 'update' || $this->form_type == 'delete' ){
+						$values[$column['name']] = $this->px->dbh()->int2datetime( time() );//編集・削除
+					}
 					break;
 				case 'delete_date':
 					$values[$column['name']] = null;//追加
+					if( $this->form_type == 'delete' ){
+						$values[$column['name']] = $this->px->dbh()->int2datetime( time() );//削除
+					}
 					break;
 				case 'delete_flg':
 					$values[$column['name']] = 0;//追加
+					if( $this->form_type == 'delete' ){
+						$values[$column['name']] = 1;//削除
+					}
 					break;
-
 				case 'password':
 					$values[$column['name']] = $this->px->user()->crypt_user_password( $this->px->req()->get_param($column['name']) );
 					break;
@@ -204,7 +237,17 @@ foreach( $this->table_definition['columns'] as $column ){
 					break;
 			}
 		}
-		$result = $this->dbml->insert( $this->table_name, $values );
+		switch( $this->form_type ){
+			case 'insert':
+				$result = $this->dbml->insert( $this->table_name, $values );
+				break;
+			case 'update':
+				$result = $this->dbml->update( $this->table_name, array('id'=>$this->target), $values );
+				break;
+			case 'delete':
+				$result = $this->dbml->update( $this->table_name, array('id'=>$this->target), $values );
+				break;
+		}
 		if( !$result ){
 			return '<p class="error">送信失敗しました。</p>';
 		}
@@ -212,7 +255,7 @@ foreach( $this->table_definition['columns'] as $column ){
 	}
 
 	/**
-	 * 完了画面を作る
+	 * 完了画面を作る。
 	 */
 	private function page_thanks(){
 		$src = '';
@@ -224,7 +267,9 @@ foreach( $this->table_definition['columns'] as $column ){
 	}
 
 	/**
-	 * 入力内容を検証する
+	 * 入力内容を検証する。
+	 * 
+	 * @return array 検出したエラーを格納する連想配列。エラーがない場合は空の配列
 	 */
 	private function validate(){
 		$errors = array();
@@ -277,6 +322,30 @@ foreach( $this->table_definition['columns'] as $column ){
 
 		return $errors;
 	}
+
+	/**
+	 * 編集前のデータをロードする。
+	 */
+	private function load_default_value($target = null){
+		$val = $this->dbml->select( $this->table_name, array('id'=>$target) );
+		foreach( $this->table_definition['columns'] as $column ){
+			switch( strtolower($column['type']) ){
+				//自動処理系の型
+				case 'serial':
+				case 'serial_s':
+				case 'create_date':
+				case 'update_date':
+				case 'delete_date':
+				case 'delete_flg':
+					continue 2;
+				case 'password'://パスワードは復元できない
+					continue 2;
+			}
+			$this->px->req()->set_param( $column['name'], $val[0][$column['name']] );
+		}
+		return true;
+	}
+
 }
 
 ?>
