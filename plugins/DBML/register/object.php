@@ -363,6 +363,9 @@ SELECT count(*) AS count FROM :D:table_name;
 		$ary_conditions = array();
 		$bind_data = array();
 		foreach( $table_definition['columns'] as $column_info ){
+			if( $column_info['type'] == 'delete_flg' && @is_null( $conditions[$column_info['name']] ) ){
+				$conditions[$column_info['name']] = 0;
+			}
 			if( !array_key_exists( $column_info['name'], $conditions ) ){ continue; }
 
 			//  メタ文字の接頭辞を決める

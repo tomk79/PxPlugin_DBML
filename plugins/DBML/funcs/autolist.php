@@ -160,7 +160,7 @@ class pxplugin_DBML_funcs_autolist{
 	 * 削除ページを作る。
 	 */
 	private function page_delete( $target ){
-		return $this->dbml->auto_form( $this->table_name, array('method'=>'update', 'target'=>$target) );
+		return $this->dbml->auto_form( $this->table_name, array('method'=>'delete', 'target'=>$target) );
 	}
 
 }

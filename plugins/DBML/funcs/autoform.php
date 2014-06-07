@@ -90,6 +90,23 @@ class pxplugin_DBML_funcs_autoform{
 	 * 入力画面を作る。
 	 */
 	private function page_input( $errors ){
+		if( $this->form_type == 'delete' ){
+			$src = '';
+			ob_start(); ?>
+<form action="?" method="post">
+	<p>
+		この項目を削除します。よろしいですか？<br />
+	</p>
+	<div class="unit form_buttons">
+		<ul>
+			<li class="form_buttons-submit"><button name="mode" value="apply">削除する</button></li>
+		</ul>
+	</div><!-- /.form_buttons -->
+</form>
+<?php
+			$src .= ob_get_clean();
+			return $src;
+		}
 		$src = '';
 		ob_start(); ?>
 <form action="?" method="post">
@@ -203,22 +220,28 @@ foreach( $this->table_definition['columns'] as $column ){
 			switch( strtolower($column['type']) ){
 				//自動処理系の型
 				case 'serial':
-					$values[$column['name']] = null;//追加
+					if( $this->form_type == 'insert' ){
+						$values[$column['name']] = null;//追加
+					}
 					break;
 				case 'serial_s':
-					$values[$column['name']] = uniqid();//追加
+					if( $this->form_type == 'insert' ){
+						$values[$column['name']] = uniqid();//追加
+					}
 					break;
 				case 'create_date':
-					$values[$column['name']] = $this->px->dbh()->int2datetime( time() );//追加
+					if( $this->form_type == 'insert' ){
+						$values[$column['name']] = $this->px->dbh()->int2datetime( time() );//追加
+					}
 					break;
 				case 'update_date':
-					$values[$column['name']] = null;//追加
+					// $values[$column['name']] = null;//追加
 					if( $this->form_type == 'update' || $this->form_type == 'delete' ){
 						$values[$column['name']] = $this->px->dbh()->int2datetime( time() );//編集・削除
 					}
 					break;
 				case 'delete_date':
-					$values[$column['name']] = null;//追加
+					// $values[$column['name']] = null;//追加
 					if( $this->form_type == 'delete' ){
 						$values[$column['name']] = $this->px->dbh()->int2datetime( time() );//削除
 					}
@@ -230,10 +253,14 @@ foreach( $this->table_definition['columns'] as $column ){
 					}
 					break;
 				case 'password':
-					$values[$column['name']] = $this->px->user()->crypt_user_password( $this->px->req()->get_param($column['name']) );
+					if( strlen($this->px->req()->get_param($column['name'])) ){
+						$values[$column['name']] = $this->px->user()->crypt_user_password( $this->px->req()->get_param($column['name']) );
+					}
 					break;
 				default:
-					$values[$column['name']] = $this->px->req()->get_param($column['name']);
+					if( !is_null($this->px->req()->get_param($column['name'])) ){
+						$values[$column['name']] = $this->px->req()->get_param($column['name']);
+					}
 					break;
 			}
 		}
@@ -272,6 +299,10 @@ foreach( $this->table_definition['columns'] as $column ){
 	 * @return array 検出したエラーを格納する連想配列。エラーがない場合は空の配列
 	 */
 	private function validate(){
+		if( $this->form_type == 'delete' ){
+			// delete の場合バリデーションエラーはない。
+			return array();
+		}
 		$errors = array();
 		foreach( $this->table_definition['columns'] as $column ){
 			$input_value = $this->px->req()->get_param($column['name']);
